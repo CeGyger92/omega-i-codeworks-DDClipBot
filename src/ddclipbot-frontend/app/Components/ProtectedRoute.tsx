@@ -26,7 +26,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
             width={128}
             height={128}
             priority
-            className="animate-pulse"
+            className="animate-pulse rounded-lg"
           />
           <div className="relative w-16 h-16">
             <div className="absolute inset-0 border-4 border-[#00FFFF] border-t-transparent rounded-full animate-spin"></div>

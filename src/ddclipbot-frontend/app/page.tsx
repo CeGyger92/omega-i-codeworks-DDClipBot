@@ -68,7 +68,7 @@ export default function Home() {
             width={256}
             height={256}
             priority
-            className="mb-6"
+            className="mb-6 rounded-xl"
           />
           <h1 className="text-4xl font-bold uppercase tracking-wider text-[#00FFFF] text-center font-[family-name:var(--font-orbitron)]">
             Clip Share

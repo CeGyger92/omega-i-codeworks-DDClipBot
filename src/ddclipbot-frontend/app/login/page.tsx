@@ -70,7 +70,7 @@ function LoginContent() {
                         width={128}
                         height={128}
                         priority
-                        className="animate-pulse"
+                        className="animate-pulse rounded-lg"
                     />
                     <div className="relative w-16 h-16">
                         <div className="absolute inset-0 border-4 border-[#00FFFF] border-t-transparent rounded-full animate-spin"></div>
@@ -94,7 +94,7 @@ function LoginContent() {
                         width={256}
                         height={256}
                         priority
-                        className="mb-6"
+                        className="mb-6 rounded-xl"
                     />
                     <h1 className="text-4xl font-bold uppercase tracking-wider text-[#00FFFF] text-center font-[family-name:var(--font-orbitron)]">
                         Clip Share
@@ -160,7 +160,7 @@ export default function Login() {
                         width={128}
                         height={128}
                         priority
-                        className="animate-pulse"
+                        className="animate-pulse rounded-lg"
                     />
                     <div className="relative w-16 h-16">
                         <div className="absolute inset-0 border-4 border-[#00FFFF] border-t-transparent rounded-full animate-spin"></div>
