@@ -79,6 +79,24 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
+        // Check if user has valid session
+        app.MapGet("/api/auth/session", (IHttpContextAccessor httpContextAccessor) =>
+        {
+            var context = httpContextAccessor.HttpContext;
+            if (context == null)
+                return Results.Unauthorized();
+
+            var sessionId = context.Request.Cookies["session_id"];
+            if (string.IsNullOrEmpty(sessionId))
+                return Results.Unauthorized();
+
+            // TODO: Validate session against database
+            // For now, just check if cookie exists
+            return Results.Ok(new { authenticated = true });
+        })
+        .WithName("CheckSession")
+        .WithOpenApi();
+
         app.MapPost("/api/auth/discord/callback", async (
             [FromBody] CallbackRequest request,
             HttpClient httpClient,

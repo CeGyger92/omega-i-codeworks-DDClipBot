@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useCallback } from "react";
+import ProtectedRoute from "./Components/ProtectedRoute";
 
 export default function Home() {
   const [formData, setFormData] = useState({
@@ -56,8 +57,9 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0C0C0C] py-8 px-4">
-      <main className="w-full max-w-4xl">
+    <ProtectedRoute>
+      <div className="flex min-h-screen items-center justify-center bg-[#0C0C0C] py-8 px-4">
+        <main className="w-full max-w-4xl">
         {/* Header with Emblem */}
         <div className="flex flex-col items-center mb-8">
           <Image
@@ -283,5 +285,6 @@ export default function Home() {
         </form>
       </main>
     </div>
+    </ProtectedRoute>
   );
 }

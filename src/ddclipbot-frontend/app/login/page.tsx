@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 
 function LoginContent() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { checkAuth } = useAuth();
 
     useEffect(() => {
         const code = searchParams.get('code');
@@ -40,8 +42,10 @@ function LoginContent() {
             
             if (data.success) {
                 // Backend has set HttpOnly session cookie
+                // Refresh auth state
+                await checkAuth();
                 // Redirect to home page
-                window.location.href = '/';
+                router.push('/');
             } else {
                 throw new Error('Authentication failed');
             }
