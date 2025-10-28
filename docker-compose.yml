@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./src/DDClipBot.Host
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Discord__Token=${DISCORD_TOKEN}
+      - Discord__ClientSecret=${DISCORD_CLIENT_SECRET}
+      - YouTube__ClientId=${YOUTUBE_CLIENT_ID}
+      - YouTube__ClientSecret=${YOUTUBE_CLIENT_SECRET}
+      - YouTube__RefreshToken=${YOUTUBE_REFRESH_TOKEN}
+      - Discord__ClientId=${DISCORD_CLIENT_ID}
+      - Discord__RedirectUri=http://localhost:3000/login
+      - Discord__GuildId=277523569708105729
+      - YouTube__ApplicationName=DDClipBot
+      - Upload__MaxFileSizeBytes=2147483648
+
+  frontend:
+    build:
+      context: ./src/ddclipbot-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:5000
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+    depends_on:
+      - backend
