@@ -1,8 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ProtectedRoute from "./Components/ProtectedRoute";
+
+interface DiscordChannel {
+  id: string;
+  name: string;
+}
 
 export default function Home() {
   const [formData, setFormData] = useState({
@@ -15,6 +20,35 @@ export default function Home() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [channels, setChannels] = useState<DiscordChannel[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Fetch Discord channels on mount
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const response = await fetch("/api/discord/channels", {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setChannels(data.channels || []);
+        } else {
+          console.error("Failed to fetch channels:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching channels:", error);
+      } finally {
+        setLoadingChannels(false);
+      }
+    };
+
+    fetchChannels();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -50,10 +84,88 @@ export default function Home() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Form submitted:", { formData, videoFile });
+    
+    if (!videoFile) {
+      setUploadError("Please select a video file");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
+
+    try {
+      // Create FormData for multipart upload
+      const formDataToSend = new FormData();
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("publishMessage", formData.publishMessage);
+      formDataToSend.append("targetChannel", formData.targetChannel);
+      formDataToSend.append("pingChannel", formData.pingChannel.toString());
+      formDataToSend.append("video", videoFile);
+
+      console.log("Starting upload:", {
+        fileName: videoFile.name,
+        fileSize: videoFile.size,
+        fileSizeMB: (videoFile.size / 1024 / 1024).toFixed(2) + " MB"
+      });
+
+      // Create an AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30 * 60 * 1000); // 30 minute timeout
+
+      try {
+        // Call backend API directly to avoid Next.js proxy limitations with large files
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/videos/upload`, {
+          method: "POST",
+          credentials: "include",
+          body: formDataToSend,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(errorData.error || "Upload failed");
+        }
+
+        const result = await response.json();
+        console.log("Upload successful:", result);
+
+        // Show success message
+        setUploadSuccess(true);
+      } catch (fetchError: unknown) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error("Upload timed out. Please try again with a smaller file or check your connection.");
+        }
+        throw fetchError;
+      }
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setFormData({
+          title: "",
+          description: "",
+          publishMessage: "",
+          targetChannel: "",
+          pingChannel: false,
+        });
+        setVideoFile(null);
+        setUploadSuccess(false);
+      }, 3000);
+
+    } catch (error) {
+      console.error("Upload error:", error);
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -152,13 +264,17 @@ export default function Home() {
               required
               value={formData.targetChannel}
               onChange={handleInputChange}
-              className="w-full bg-[#0C0C0C] border border-[#00FFFF] rounded-md text-[#CCCCCC] px-4 py-3 focus:outline-none focus:border-[#FF4500] focus:shadow-[0_0_10px_rgba(255,69,0,0.5)] transition-all cursor-pointer"
+              disabled={loadingChannels}
+              className="w-full bg-[#0C0C0C] border border-[#00FFFF] rounded-md text-[#CCCCCC] px-4 py-3 focus:outline-none focus:border-[#FF4500] focus:shadow-[0_0_10px_rgba(255,69,0,0.5)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select a channel</option>
-              <option value="general">general</option>
-              <option value="flapjack-times">flapjack-times</option>
-              <option value="pure-chaos">pure-chaos</option>
-              <option value="plunder-speak">plunder-speak</option>
+              <option value="">
+                {loadingChannels ? "Loading channels..." : "Select a channel"}
+              </option>
+              {channels.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -273,13 +389,58 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Error Message */}
+          {uploadError && (
+            <div className="bg-[#FF4500]/10 border border-[#FF4500] rounded-lg p-4 text-[#FF4500]">
+              ❌ {uploadError}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {uploadSuccess && (
+            <div className="bg-[#39FF14]/10 border border-[#39FF14] rounded-lg p-4 text-[#39FF14]">
+              ✅ Upload queued successfully! You'll receive a DM when processing starts.
+            </div>
+          )}
+
           {/* Submit Button */}
           <div className="pt-4">
             <button
               type="submit"
-              className="w-full bg-[#0C0C0C] border-2 border-[#FF4500] rounded-lg text-[#FF4500] py-4 px-8 uppercase tracking-wider font-bold text-lg hover:bg-[#FF4500] hover:text-[#0C0C0C] hover:shadow-[0_0_20px_rgba(255,69,0,0.6)] transition-all active:bg-[#00FFFF] active:border-[#00FFFF]"
+              disabled={isUploading}
+              className={`w-full bg-[#0C0C0C] border-2 border-[#FF4500] rounded-lg text-[#FF4500] py-4 px-8 uppercase tracking-wider font-bold text-lg transition-all ${
+                isUploading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-[#FF4500] hover:text-[#0C0C0C] hover:shadow-[0_0_20px_rgba(255,69,0,0.6)] active:bg-[#00FFFF] active:border-[#00FFFF]"
+              }`}
             >
-              Upload Clip
+              {isUploading ? (
+                <span className="flex items-center justify-center gap-3">
+                  <svg
+                    className="animate-spin h-5 w-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Uploading...
+                </span>
+              ) : (
+                "Upload Clip"
+              )}
             </button>
           </div>
         </form>

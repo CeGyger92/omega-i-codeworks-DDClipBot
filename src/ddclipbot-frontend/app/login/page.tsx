@@ -56,7 +56,7 @@ function LoginContent() {
     };
 
     const handleDiscordLogin = () => {
-        window.location.href = "https://discord.com/oauth2/authorize?client_id=1430631789776601199&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Flogin&prompt=none&scope=identify+email+openid";
+        window.location.href = "https://discord.com/oauth2/authorize?client_id=1430631789776601199&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Flogin&scope=guilds.members.read+identify+email+openid";
     };
 
     // Show loading state if processing OAuth callback

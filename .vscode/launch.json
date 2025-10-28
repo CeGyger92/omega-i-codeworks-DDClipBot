@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Next.js: Debug Frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "${workspaceFolder}/src/ddclipbot-frontend",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "serverReadyAction": {
+        "pattern": "started server on .+, url: (https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      }
+    },
+    {
+      "type": "coreclr",
+      "request": "launch",
+      "name": ".NET: Launch Backend",
+      "preLaunchTask": "build-backend",
+      "program": "${workspaceFolder}/src/DDClipBot.Host/bin/Debug/net9.0/DDClipBot.Host.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/DDClipBot.Host",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger/index.html"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack: Launch Both",
+      "configurations": [
+        ".NET: Launch Backend",
+        "Next.js: Debug Frontend"
+      ]
+    }
+  ]
+}
