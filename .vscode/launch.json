@@ -13,6 +13,9 @@
       "cwd": "${workspaceFolder}/src/ddclipbot-frontend",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NEXT_PUBLIC_DISCORD_CLIENT_ID": "1430631789776601199"
+      },
       "serverReadyAction": {
         "pattern": "started server on .+, url: (https?://.+)",
         "uriFormat": "%s",

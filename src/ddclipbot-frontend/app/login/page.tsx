@@ -24,8 +24,9 @@ function LoginContent() {
         setError(null);
 
         try {
-            // Call backend API - this will be proxied to ASP.NET backend
-            const response = await fetch('/api/auth/discord/callback', {
+            // Call backend API directly for OAuth callback
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/auth/discord/callback`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,11 +42,23 @@ function LoginContent() {
             const data = await response.json();
             
             if (data.success) {
+                console.log('[Login] OAuth callback successful, waiting before session check...');
+                
+                // Wait a moment for the cookie to be properly set
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 // Backend has set HttpOnly session cookie
-                // Refresh auth state
-                await checkAuth();
-                // Redirect to home page
-                router.push('/');
+                // Refresh auth state and wait for confirmation
+                console.log('[Login] Checking authentication status...');
+                const isAuthenticated = await checkAuth();
+                console.log('[Login] Authentication status:', isAuthenticated);
+                
+                if (isAuthenticated) {
+                    // Redirect to home page
+                    router.push('/');
+                } else {
+                    throw new Error('Session verification failed after login');
+                }
             } else {
                 throw new Error('Authentication failed');
             }
@@ -56,7 +69,9 @@ function LoginContent() {
     };
 
     const handleDiscordLogin = () => {
-        window.location.href = "https://discord.com/oauth2/authorize?client_id=1430631789776601199&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Flogin&scope=guilds.members.read+identify+email+openid";
+        const redirectUri = encodeURIComponent(`${window.location.origin}/login`);
+        const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '1430631789776601199';
+        window.location.href = `https://discord.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=identify+email+openid`;
     };
 
     // Show loading state if processing OAuth callback

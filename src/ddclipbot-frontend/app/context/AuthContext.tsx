@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  checkAuth: () => Promise<void>;
+  checkAuth: () => Promise<boolean>; // Changed to return boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,14 +17,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       // Check if session_id cookie exists by making a request to backend
-      const response = await fetch('/api/auth/session', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/session`, {
         credentials: 'include',
       });
       
-      setIsAuthenticated(response.ok);
+      const authenticated = response.ok;
+      setIsAuthenticated(authenticated);
+      return authenticated; // Return the authentication status
     } catch (error) {
       console.error('Auth check failed:', error);
       setIsAuthenticated(false);
+      return false;
     } finally {
       setIsLoading(false);
     }

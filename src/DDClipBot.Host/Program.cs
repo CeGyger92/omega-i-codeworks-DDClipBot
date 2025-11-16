@@ -56,7 +56,9 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "https://ddclipbot-frontend.agreeableriver-6efb45ef.eastus.azurecontainerapps.io")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -73,7 +75,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
-app.UseHttpsRedirection();
+
+// Only use HTTPS redirection in production
+// In development, we need HTTP for proper cookie handling with Next.js proxy
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 // Map endpoint groups
 app.MapAuthEndpoints();

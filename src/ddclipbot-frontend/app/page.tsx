@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useCallback, useEffect } from "react";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import { useAuth } from "./context/AuthContext";
 
 interface DiscordChannel {
   id: string;
@@ -10,6 +11,7 @@ interface DiscordChannel {
 }
 
 export default function Home() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -26,11 +28,18 @@ export default function Home() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Fetch Discord channels on mount
+  // Fetch Discord channels only after authentication is confirmed
   useEffect(() => {
+    // Don't fetch if still checking auth or not authenticated
+    if (authLoading || !isAuthenticated) {
+      setLoadingChannels(false);
+      return;
+    }
+
     const fetchChannels = async () => {
       try {
-        const response = await fetch("/api/discord/channels", {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/discord/channels`, {
           credentials: "include",
         });
 
@@ -48,7 +57,7 @@ export default function Home() {
     };
 
     fetchChannels();
-  }, []);
+  }, [isAuthenticated, authLoading]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

@@ -2,11 +2,21 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# Accept build arguments
+ARG BACKEND_URL=http://localhost:5000
+ARG NEXT_PUBLIC_API_URL=http://localhost:5000
+ARG NEXT_PUBLIC_DISCORD_CLIENT_ID=1430631789776601199
+
+# Set as environment variables for Next.js build
+ENV BACKEND_URL=$BACKEND_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_DISCORD_CLIENT_ID=$NEXT_PUBLIC_DISCORD_CLIENT_ID
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY . .

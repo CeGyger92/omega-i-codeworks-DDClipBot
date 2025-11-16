@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -24,16 +25,29 @@ public static class AuthEndpoints
         {
             var context = httpContextAccessor.HttpContext;
             if (context == null)
+            {
+                Console.WriteLine("[Session Check] HTTP context is null");
                 return Results.Unauthorized();
+            }
 
             var sessionId = context.Request.Cookies["session_id"];
+            Console.WriteLine($"[Session Check] Cookie value: {sessionId ?? "(null)"}");
+            Console.WriteLine($"[Session Check] All cookies: {string.Join(", ", context.Request.Cookies.Select(c => $"{c.Key}={c.Value}"))}");
+            
             if (string.IsNullOrEmpty(sessionId))
+            {
+                Console.WriteLine("[Session Check] No session_id cookie found");
                 return Results.Unauthorized();
+            }
 
             var session = sessionStore.GetSession(sessionId);
             if (session == null)
+            {
+                Console.WriteLine($"[Session Check] No session found for ID: {sessionId}");
                 return Results.Unauthorized();
+            }
 
+            Console.WriteLine($"[Session Check] Valid session found for user: {session.Username}");
             return Results.Ok(new { authenticated = true, userId = session.DiscordUserId, username = session.Username });
         })
         .WithName("CheckSession")
@@ -77,10 +91,6 @@ public static class AuthEndpoints
             userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
             var userResponse = await httpClient.SendAsync(userRequest);
 
-            var nickRequest = new HttpRequestMessage(HttpMethod.Get, $"https://discord.com/api/users/@me/guilds/{config["Discord:GuildId"]}/member");
-            nickRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
-            var nickResponse = await httpClient.SendAsync(nickRequest);
-
             if (!userResponse.IsSuccessStatusCode)
             {
                 var userErrorContent = await userResponse.Content.ReadAsStringAsync();
@@ -89,7 +99,7 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
             }
 
-            var user = await nickResponse.Content.ReadFromJsonAsync<DiscordUser>();
+            var user = await userResponse.Content.ReadFromJsonAsync<DiscordUser>();
             if (user == null)
                 return Results.Problem("Failed to parse user response");
 
@@ -99,8 +109,8 @@ public static class AuthEndpoints
             
             var session = new UserSession(
                 sessionId,
-                user.User.Id,
-                user.Nickname ?? user.User.Username,
+                user.Id,
+                user.Username,
                 tokens.AccessToken,
                 tokens.RefreshToken,
                 expiresAt
@@ -112,8 +122,10 @@ public static class AuthEndpoints
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = app.Environment.IsProduction(), // Set to true in production with HTTPS
+                Secure = false, // Must be false for http://localhost
                 SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Domain = null, // Let browser handle domain for localhost
                 MaxAge = TimeSpan.FromDays(30)
             };
 
@@ -122,6 +134,10 @@ public static class AuthEndpoints
                 return Results.Problem("HTTP context not available");
                 
             context.Response.Cookies.Append("session_id", sessionId, cookieOptions);
+            
+            Console.WriteLine($"[OAuth Callback] Session created and cookie set for user: {user.Username}");
+            Console.WriteLine($"[OAuth Callback] Session ID: {sessionId}");
+            Console.WriteLine($"[OAuth Callback] Cookie options - HttpOnly: {cookieOptions.HttpOnly}, Secure: {cookieOptions.Secure}, SameSite: {cookieOptions.SameSite}, Path: {cookieOptions.Path}");
 
             return Results.Ok(new { success = true });
         })
@@ -139,11 +155,6 @@ record TokenResponse(
 );
 
 record DiscordUser(
-    [property: JsonPropertyName("user")] UserInfo User,
-    [property: JsonPropertyName("nick")] string? Nickname
-);
-
-record UserInfo(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("username")] string Username
 );
